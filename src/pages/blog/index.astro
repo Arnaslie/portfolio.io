@@ -8,8 +8,8 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
 );
 ---
 
-<BaseLayout title="Writing — Arnas" description="Notes on software, graphics, and things I build.">
-  <h1 class="page-title">Writing</h1>
+<BaseLayout title="Blog — Arnas" description="Notes on software, graphics, and things I build.">
+  <h1 class="page-title">Blog</h1>
 
   {posts.length === 0 ? (
     <p class="empty">No posts yet.</p>
