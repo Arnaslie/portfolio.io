@@ -1,13 +1,21 @@
-<!DOCTYPE html>
+---
+import { url } from '../lib/url';
+import '../styles/portfolio.css';
+---
+
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Portfolio</title>
-    <link rel="stylesheet" href="/style.css" />
+    <meta name="description" content="Arnas — Software Engineer based in U.S.A" />
+    <meta name="generator" content={Astro.generator} />
   </head>
   <body>
     <canvas id="webgl"></canvas>
+
+    <a class="blog-link" href={url('/blog/')}>Writing</a>
 
     <div class="sections-wrapper">
       <section class="section" id="hero">
@@ -44,6 +52,8 @@
       </section>
     </div>
 
-    <script type="module" src="/main.js"></script>
+    <script>
+      import '../scripts/portfolio.js';
+    </script>
   </body>
 </html>

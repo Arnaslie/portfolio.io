@@ -115,3 +115,20 @@ p {
   color: #a78bfa;
   padding-left: 0.5rem;
 }
+
+.blog-link {
+  position: fixed;
+  top: 2rem;
+  right: 2.5rem;
+  z-index: 2;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #666;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.blog-link:hover {
+  color: #a78bfa;
+}

@@ -1,0 +1,237 @@
+/* Matches the palette and type scale of the Three.js portfolio at the site root. */
+:root {
+  --bg: #080808;
+  --fg: #f0f0f0;
+  --muted: #999;
+  --dim: #666;
+  --faint: #444;
+  --rule: #1a1a1a;
+  --accent: #a78bfa;
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 6vw;
+}
+
+/* Header ------------------------------------------------------------------ */
+
+.site-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 3rem 0 2.5rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 3.5rem;
+}
+
+.site-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.back-link {
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.back-link:hover { color: var(--accent); }
+
+/* Post list --------------------------------------------------------------- */
+
+.page-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 3rem;
+}
+
+.post-list { list-style: none; }
+
+.post-list li {
+  padding: 1.6rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.post-list a {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+  transition: padding-left 0.2s;
+}
+
+.post-list a:hover { padding-left: 0.5rem; }
+.post-list a:hover .post-link-title { color: var(--accent); }
+
+.post-link-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #ccc;
+  transition: color 0.2s;
+}
+
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.post-excerpt {
+  margin-top: 0.6rem;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.tag {
+  color: var(--dim);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  letter-spacing: 0.06em;
+}
+
+.empty { color: var(--dim); }
+
+/* Single post ------------------------------------------------------------- */
+
+.post-header { margin-bottom: 3rem; }
+
+.post-title {
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  margin-bottom: 0.8rem;
+}
+
+.prose { padding-bottom: 5rem; }
+
+.prose p,
+.prose li {
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.prose p, .prose ul, .prose ol, .prose pre, .prose blockquote, .prose table {
+  margin: 1.4rem 0;
+}
+
+.prose h2, .prose h3, .prose h4 {
+  color: var(--fg);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+  margin: 2.8rem 0 0.9rem;
+}
+
+.prose h2 { font-size: 1.6rem; }
+.prose h3 { font-size: 1.25rem; }
+.prose h4 { font-size: 1.05rem; }
+
+.prose ul, .prose ol { padding-left: 1.4rem; }
+.prose li { margin: 0.4rem 0; }
+
+.prose a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(167, 139, 250, 0.35);
+  transition: border-color 0.2s;
+}
+
+.prose a:hover { border-bottom-color: var(--accent); }
+
+.prose strong { color: #ddd; }
+
+.prose blockquote {
+  border-left: 2px solid var(--rule);
+  padding-left: 1.2rem;
+  font-style: italic;
+}
+
+.prose code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: #131313;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0.12em 0.4em;
+  color: #ddd;
+}
+
+.prose pre {
+  background: #0d0d0d !important;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 1.1rem 1.2rem;
+  overflow-x: auto;
+}
+
+.prose pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.88rem;
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.prose th, .prose td {
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--muted);
+}
+
+.prose th { color: #ccc; font-weight: 600; }
+
+.post-footer {
+  border-top: 1px solid var(--rule);
+  padding: 2rem 0 4rem;
+}
