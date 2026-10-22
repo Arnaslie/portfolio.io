@@ -12,8 +12,16 @@ const LAST = PAGE_COUNT - 1; // number of page-turns between cover and back cove
 
 // Let CSS size the track + spacer from the real page count.
 document.documentElement.style.setProperty('--pages', String(PAGE_COUNT));
-document.getElementById('folio-total').textContent = String(PAGE_COUNT);
+const pad2 = (n) => String(n).padStart(2, '0');
+document.getElementById('folio-total').textContent = pad2(PAGE_COUNT);
 const folioCurrent = document.getElementById('folio-current');
+
+// One tick per page. The list is styled `direction: rtl`, so tick 1 lands on
+// the right, the same side page 1 sits on.
+const ticksEl = document.getElementById('folio-ticks');
+const ticks = pages.map(() => ticksEl.appendChild(document.createElement('li')));
+const btnNext = document.getElementById('pager-next');
+const btnPrev = document.getElementById('pager-prev');
 
 // ─── Renderer ────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('webgl');
@@ -189,6 +197,8 @@ const lenis = new Lenis({
   // fingers right→left (deltaX > 0) should move you FORWARD, like flicking a
   // manga page — forward is +scroll, so negate deltaX.
   virtualScroll: (data) => {
+    // Free wheel/trackpad input takes over from any button/key page-turn.
+    navTarget = null;
     data.deltaX = -data.deltaX;
     return true;
   },
@@ -223,23 +233,99 @@ lenis.on('scroll', () => {
   settleTimer = setTimeout(settle, SETTLE_MS);
 });
 
+// LESSON: where does "one page on" start from? If it starts from the page
+// we're *visually nearest* to, two quick key presses break: the second press
+// lands while the camera is still only ~20% into the first turn, rounds back
+// to the old page, and you go one page instead of two. So remember the page
+// we're heading to and step from THAT while a turn is in flight.
+let navTarget = null;
+
 function goToPage(index) {
   const i = THREE.MathUtils.clamp(index, 0, LAST);
-  lenis.scrollTo(i * pageStep(), { duration: 1.1, easing: easeOutCubic });
+  navTarget = i;
+  lenis.scrollTo(i * pageStep(), {
+    duration: 1.1,
+    easing: easeOutCubic,
+    onComplete: () => { if (navTarget === i) navTarget = null; },
+  });
 }
 
-// Arrow keys follow the PAGE direction: ← reads on, → goes back.
-// (↓ / PageDown / Space keep working natively and also move forward.)
+// +1 = read on (next page, arrives from the left), -1 = go back.
+function turn(dir) {
+  const from = navTarget ?? nearestPageIndex();
+  goToPage(from + dir);
+}
+
+// ─── Keyboard ───────────────────────────────────────────────────────────────
+// Manga direction: ← reads on, → goes back. PageDown / Space / ↓ = next page,
+// PageUp / Shift+Space / ↑ = previous, each exactly one page instead of the
+// browser's native "scroll ~87% of a screen".
+const NEXT_KEYS = new Set(['ArrowLeft', 'ArrowDown', 'PageDown']);
+const PREV_KEYS = new Set(['ArrowRight', 'ArrowUp', 'PageUp']);
+
 window.addEventListener('keydown', (e) => {
-  if (e.target instanceof HTMLElement && e.target.closest('input, textarea, [contenteditable]')) return;
-  if (e.key === 'ArrowLeft')  { e.preventDefault(); goToPage(nearestPageIndex() + 1); }
-  if (e.key === 'ArrowRight') { e.preventDefault(); goToPage(nearestPageIndex() - 1); }
-  if (e.key === 'Home')       { e.preventDefault(); goToPage(0); }
-  if (e.key === 'End')        { e.preventDefault(); goToPage(LAST); }
+  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return; // leave Cmd+← (history) etc. alone
+  const el = e.target instanceof HTMLElement ? e.target : null;
+  if (el?.closest('input, textarea, select, [contenteditable]')) return;
+
+  let dir = 0;
+  if (NEXT_KEYS.has(e.key)) dir = 1;
+  else if (PREV_KEYS.has(e.key)) dir = -1;
+  else if (e.key === ' ') {
+    if (el?.closest('button, a')) return; // Space on a focused button = click it, not scroll
+    dir = e.shiftKey ? -1 : 1;
+  }
+  else if (e.key === 'Home') { e.preventDefault(); goToPage(0); return; }
+  else if (e.key === 'End')  { e.preventDefault(); goToPage(LAST); return; }
+  if (!dir) return;
+
+  e.preventDefault();
+  turn(dir);
 });
 
-// Expose for poking around in DevTools: __manga.goToPage(3)
-window.__manga = { lenis, goToPage, progress, PAGE_COUNT };
+// ─── On-screen buttons ──────────────────────────────────────────────────────
+btnNext.addEventListener('click', () => turn(1));
+btnPrev.addEventListener('click', () => turn(-1));
+
+// ─── Touch: horizontal swipe = one page ─────────────────────────────────────
+// Vertical touch-scrolling still glides natively and settles onto a page.
+// A clearly sideways swipe turns exactly one page. Direction follows the
+// paper: the book slides RIGHT as you read on, so dragging your finger to the
+// right pulls the next page in from the left (same as Lenis' trackpad flip).
+const SWIPE_MIN_PX = 40;
+let touchStart = null;
+
+window.addEventListener('touchstart', (e) => {
+  if (e.touches.length !== 1) { touchStart = null; return; }
+  const t = e.touches[0];
+  touchStart = { x: t.clientX, y: t.clientY };
+}, { passive: true });
+
+window.addEventListener('touchend', (e) => {
+  if (!touchStart) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStart.x;
+  const dy = t.clientY - touchStart.y;
+  touchStart = null;
+  if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.2) return; // tap or vertical drag
+  turn(dx > 0 ? 1 : -1);
+}, { passive: true });
+
+window.addEventListener('touchcancel', () => { touchStart = null; }, { passive: true });
+
+// ─── Folio: counter, ticks, button states ───────────────────────────────────
+function renderFolio(index) {
+  folioCurrent.textContent = pad2(index + 1);
+  ticks.forEach((tick, i) => {
+    tick.classList.toggle('is-read', i < index);
+    tick.classList.toggle('is-current', i === index);
+  });
+  btnNext.disabled = index >= LAST;
+  btnPrev.disabled = index <= 0;
+}
+
+// Expose for poking around in DevTools: __manga.goToPage(3), __manga.turn(1)
+window.__manga = { lenis, goToPage, turn, progress, PAGE_COUNT };
 
 // ─── Render loop: ONE requestAnimationFrame drives everything ────────────────
 // LESSON: Lenis, the DOM track and the camera all update in the same frame
@@ -249,7 +335,7 @@ window.__manga = { lenis, goToPage, progress, PAGE_COUNT };
 // THREE.Clock is deprecated in r184. Timer is driven by the rAF timestamp
 // we already receive, so the mesh spin and Lenis share one time source.
 const timer = new THREE.Timer();
-let lastFolio = 0;
+let lastFolio = -1;
 
 function animate(time) {
   lenis.raf(time);
@@ -267,9 +353,9 @@ function animate(time) {
   camera.position.x = -pagesTravelled * PAGE_W + mouseSmoothed.x * 0.25;
   camera.position.y = mouseSmoothed.y * 0.2;
 
-  const folio = Math.round(pagesTravelled) + 1;
+  const folio = Math.round(pagesTravelled);
   if (folio !== lastFolio) {
-    folioCurrent.textContent = String(folio);
+    renderFolio(folio);
     lastFolio = folio;
   }
 

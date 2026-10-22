@@ -31,8 +31,24 @@ import '../styles/portfolio.css';
 
     <a class="blog-link" href={url('/blog/')}>Blog</a>
 
-    <!-- Folio = the printed page number. Updated from scroll progress. -->
-    <p class="folio" aria-live="polite"><span id="folio-current">1</span> / <span id="folio-total">6</span></p>
+    <!-- Page controls, laid out the way a manga reads: NEXT sits on the LEFT
+         (that's where the next page comes from), PREVIOUS on the right.
+         The folio between them is the printed page number; the ticks under it
+         run right→left too, so page 1's tick is the rightmost one. -->
+    <nav class="pager" aria-label="Pages">
+      <button class="pager__btn pager__btn--next" id="pager-next" type="button" aria-label="Next page">
+        <span aria-hidden="true">&larr;</span><span class="pager__kana" aria-hidden="true">次</span>
+      </button>
+      <div class="folio">
+        <p class="folio__count" aria-live="polite">
+          <span class="folio__current" id="folio-current">01</span><span class="folio__sep">/</span><span id="folio-total">06</span>
+        </p>
+        <ol class="folio__ticks" id="folio-ticks" aria-hidden="true"></ol>
+      </div>
+      <button class="pager__btn pager__btn--prev" id="pager-prev" type="button" aria-label="Previous page">
+        <span class="pager__kana" aria-hidden="true">前</span><span aria-hidden="true">&rarr;</span>
+      </button>
+    </nav>
 
     <!-- The spacer gives the document real vertical height. Lenis scrolls it;
          the JS converts that vertical progress into horizontal travel. -->

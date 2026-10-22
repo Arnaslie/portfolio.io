@@ -8,6 +8,7 @@
   --pages: 6;              /* JS overwrites this from the real page count */
   --paper: #0b0b0b;        /* page "paper" — your existing dark palette */
   --ink: #ececec;          /* panel borders: inverted ink on dark paper */
+  --accent: #a78bfa;       /* the violet you already use for hovers */
   --gutter: 14px;          /* white space between panels in a manga */
   --margin-y: 6vh;
   --margin-x: 4vw;
@@ -240,20 +241,88 @@ p {
 }
 .blog-link:hover { color: #a78bfa; }
 
-.folio {
+/* ─── Pager: [← 次]  03 / 06  [前 →] ─────────────────────────────────────
+   A little paper tag in the bottom-right margin, inked like a panel. */
+.pager {
   position: fixed;
-  bottom: 1.2rem;
-  right: 2rem;
+  bottom: max(0.35rem, calc(var(--margin-y) * 0.5 - 1rem)); /* centered in the bottom page margin */
+  right: var(--margin-x);
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem;
+  background: var(--paper);
+  border: 1px solid #2a2a2a;
+}
+
+.pager__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid #555;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background-color 0.2s, opacity 0.2s;
+}
+.pager__kana { font-size: 0.75rem; color: #777; transition: color 0.2s; }
+
+.pager__btn:hover:not(:disabled) {
+  color: var(--paper);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.pager__btn:hover:not(:disabled) .pager__kana { color: var(--paper); }
+.pager__btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pager__btn:disabled { opacity: 0.25; cursor: default; }
+
+.folio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.6rem;
+}
+
+.folio__count {
+  line-height: 1;
   font-size: 0.75rem;
-  letter-spacing: 0.2em;
-  color: #666;
+  letter-spacing: 0.15em;
+  color: #555;
   font-variant-numeric: tabular-nums;
 }
+.folio__current {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.folio__sep { margin: 0 0.3em; }
+
+/* One tick per page, page 1 on the RIGHT (RTL), like the book. */
+.folio__ticks {
+  display: flex;
+  direction: rtl;
+  gap: 3px;
+  list-style: none;
+}
+.folio__ticks li {
+  width: 8px;
+  height: 3px;
+  background: #2a2a2a;
+  transition: background-color 0.3s, width 0.3s;
+}
+.folio__ticks li.is-read    { background: #555; }
+.folio__ticks li.is-current { background: var(--accent); width: 16px; }
 
 /* ─── Narrow / portrait screens: stack panels, keep RTL page travel ───── */
 @media (max-width: 720px) {
   :root { --margin-y: 9vh; --margin-x: 5vw; }
+  .pager { right: 50%; transform: translateX(50%); bottom: 0.6rem; }
   .page--tall,
   .page--wide {
     grid-template-columns: 1fr;
@@ -265,4 +334,5 @@ p {
 
 @media (prefers-reduced-motion: reduce) {
   .scroll-hint { animation: none; }
+  .folio__ticks li, .pager__btn { transition: none; }
 }
