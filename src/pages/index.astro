@@ -1,6 +1,20 @@
 ---
 import { url } from '../lib/url';
 import '../styles/portfolio.css';
+
+// ─── Manga reading order ────────────────────────────────────────────────────
+// Pages are listed here in READING order (first page = Hero). The CSS lays
+// the track out with `flex-direction: row-reverse`, so page 1 sits on the
+// far RIGHT and you travel LEFT to read on — like a tankōbon.
+//
+// Inside every page, panels are ALSO in reading order in the DOM. The page
+// grid uses `direction: rtl`, so CSS grid auto-placement fills the top-right
+// cell first, then moves left, then wraps to the next row. You never have to
+// hand-position a panel to get manga order: write them in the order a reader
+// should see them and the grid does the rest.
+//
+// `art` panels are transparent windows onto the three.js scene. Each page has
+// exactly ONE art panel (the JS pins that page's mesh to it).
 ---
 
 <!doctype html>
@@ -17,40 +31,114 @@ import '../styles/portfolio.css';
 
     <a class="blog-link" href={url('/blog/')}>Blog</a>
 
-    <div class="sections-wrapper">
-      <section class="section" id="hero">
-        <div class="content">
-          <h1>Arnas</h1>
-          <p class="subtitle">Software Engineer based in U.S.A</p>
-          <p class="scroll-hint">Scroll to explore &darr;</p>
-        </div>
-      </section>
+    <!-- Page controls, laid out the way a manga reads: NEXT sits on the LEFT
+         (that's where the next page comes from), PREVIOUS on the right.
+         The folio between them is the printed page number; the ticks under it
+         run right→left too, so page 1's tick is the rightmost one. -->
+    <nav class="pager" aria-label="Pages">
+      <button class="pager__btn pager__btn--next" id="pager-next" type="button" aria-label="Next page">
+        <span aria-hidden="true">&larr;</span><span class="pager__kana" aria-hidden="true">次</span>
+      </button>
+      <div class="folio">
+        <p class="folio__count" aria-live="polite">
+          <span class="folio__current" id="folio-current">01</span><span class="folio__sep">/</span><span id="folio-total">06</span>
+        </p>
+        <ol class="folio__ticks" id="folio-ticks" aria-hidden="true"></ol>
+      </div>
+      <button class="pager__btn pager__btn--prev" id="pager-prev" type="button" aria-label="Previous page">
+        <span class="pager__kana" aria-hidden="true">前</span><span aria-hidden="true">&rarr;</span>
+      </button>
+    </nav>
 
-      <section class="section" id="about">
-        <div class="content content--right">
-          <h2>About</h2>
-          <p>Builder, Engineer</p>
-        </div>
-      </section>
+    <!-- The spacer gives the document real vertical height. Lenis scrolls it;
+         the JS converts that vertical progress into horizontal travel. -->
+    <div class="scroll-spacer" aria-hidden="true"></div>
 
-      <section class="section" id="projects">
-        <div class="content">
-          <h2>Projects</h2>
-          <ul class="project-list">
-            <li><a href="https://github.com/Arnaslie/operation-floresta" target="_blank">Operation Floresta</a></li>
-            <li><a href="https://github.com/Arnaslie/march-madness-2026" target="_blank">March Madness</a></li>
-            <li><a href="https://github.com/Arnaslie/Animal-Checker" target="_blank">Animal Checker</a></li>
-          </ul>
-        </div>
-      </section>
+    <main class="book">
+      <div class="track" id="track">
 
-      <section class="section" id="contact">
-        <div class="content content--center">
-          <h2>Connect</h2>
-          <p>arnutislie12@gmail.com</p>
-        </div>
-      </section>
-    </div>
+        <!-- 1 — HERO (cover). Wide splash panel on top, two beats below. -->
+        <section class="page page--wide" id="hero" data-page="1" aria-label="Cover">
+          <div class="panel panel--art" data-art></div>
+          <div class="panel panel--text">
+            <h1>Arnas</h1>
+          </div>
+          <div class="panel panel--text panel--tone">
+            <p class="subtitle">Software Engineer based in U.S.A</p>
+            <p class="scroll-hint">Scroll to read &larr;</p>
+          </div>
+          <span class="page-no">1</span>
+        </section>
+
+        <!-- 2 — ABOUT. Tall art panel on the right, read first. -->
+        <section class="page page--tall" id="about" data-page="2" aria-label="About">
+          <div class="panel panel--art" data-art></div>
+          <div class="panel panel--text">
+            <h2>About</h2>
+          </div>
+          <div class="panel panel--text panel--tone">
+            <p>Builder, Engineer</p>
+          </div>
+          <span class="page-no">2</span>
+        </section>
+
+        <!-- 3 — PROJECT: Operation Floresta -->
+        <section class="page page--tall" id="project-floresta" data-page="3" aria-label="Operation Floresta">
+          <div class="panel panel--art" data-art></div>
+          <div class="panel panel--text">
+            <p class="chapter">Project 01</p>
+            <h2>Operation Floresta</h2>
+          </div>
+          <div class="panel panel--text panel--tone">
+            <p>AI-guided discovery of Amazonian Dark Earths and earthworks in the Upper Xingu — remote sensing, machine learning and GPT-4.1 reasoning.</p>
+            <a class="panel-link" href="https://github.com/Arnaslie/operation-floresta" target="_blank" rel="noopener">Read on GitHub &larr;</a>
+          </div>
+          <span class="page-no">3</span>
+        </section>
+
+        <!-- 4 — PROJECT: March Madness. Mirrored layout (wide splash) to vary rhythm. -->
+        <section class="page page--wide" id="project-march-madness" data-page="4" aria-label="March Madness">
+          <div class="panel panel--art" data-art></div>
+          <div class="panel panel--text">
+            <p class="chapter">Project 02</p>
+            <h2>March Madness</h2>
+          </div>
+          <div class="panel panel--text panel--tone">
+            <p>A notebook for Kaggle's March Machine Learning Mania 2026.</p>
+            <a class="panel-link" href="https://github.com/Arnaslie/march-madness-2026" target="_blank" rel="noopener">Read on GitHub &larr;</a>
+          </div>
+          <span class="page-no">4</span>
+        </section>
+
+        <!-- 5 — PROJECT: Animal Checker -->
+        <section class="page page--tall" id="project-animal-checker" data-page="5" aria-label="Animal Checker">
+          <div class="panel panel--art" data-art></div>
+          <div class="panel panel--text">
+            <p class="chapter">Project 03</p>
+            <h2>Animal Checker</h2>
+          </div>
+          <div class="panel panel--text panel--tone">
+            <p>Snap a photo of an animal: a Vision Transformer identifies it, and Perplexity Sonar checks whether it's dangerous where you are. FastAPI + Streamlit.</p>
+            <a class="panel-link" href="https://github.com/Arnaslie/Animal-Checker" target="_blank" rel="noopener">Read on GitHub &larr;</a>
+          </div>
+          <span class="page-no">5</span>
+        </section>
+
+        <!-- 6 — CONNECT (back cover). -->
+        <section class="page page--wide" id="contact" data-page="6" aria-label="Connect">
+          <div class="panel panel--art" data-art></div>
+          <div class="panel panel--text">
+            <h2>Connect</h2>
+          </div>
+          <div class="panel panel--text panel--tone">
+            <a class="panel-link" href="mailto:arnutislie12@gmail.com">arnutislie12@gmail.com</a>
+            <p class="end-mark">— 完 —</p>
+          </div>
+          <span class="page-no">6</span>
+        </section>
+
+      </div>
+    </main>
 
     <script>
       import '../scripts/portfolio.js';

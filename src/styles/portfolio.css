@@ -4,131 +4,335 @@
   box-sizing: border-box;
 }
 
+:root {
+  --pages: 6;              /* JS overwrites this from the real page count */
+  --paper: #0b0b0b;        /* page "paper" — your existing dark palette */
+  --ink: #ececec;          /* panel borders: inverted ink on dark paper */
+  --accent: #a78bfa;       /* the violet you already use for hovers */
+  --gutter: 14px;          /* white space between panels in a manga */
+  --margin-y: 6vh;
+  --margin-x: 4vw;
+}
+
 body {
-  background: #080808;
+  background: #050505;
   color: #f0f0f0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   overflow-x: hidden;
 }
 
+/* Hide the (vertical) scrollbar: it would point the wrong way for a
+   horizontal book, and its width makes 100vw (includes scrollbar) differ
+   from the canvas width (excludes it), which would unglue meshes from
+   their panels. Scrolling still works normally. */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
+
+/* Lenis' recommended base styles (inlined so we control them) */
+html.lenis, html.lenis body { height: auto; }
+.lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
+.lenis [data-lenis-prevent] { overscroll-behavior: contain; }
+
 #webgl {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   z-index: 0;
 }
 
-.sections-wrapper {
-  position: relative;
+/* ─── The scroll-mapping trick ────────────────────────────────────────────
+   The document scrolls VERTICALLY over this invisible spacer (N viewports
+   tall). Nothing visible lives in it. The .book is position:fixed, so it
+   never moves with the document; JS slides the .track sideways instead. */
+.scroll-spacer {
+  height: calc(var(--pages) * 100vh);
+}
+
+.book {
+  position: fixed;
+  inset: 0;
   z-index: 1;
-  pointer-events: none;
+  overflow: hidden;
+  pointer-events: none;   /* let clicks through to nothing but panels/links */
 }
 
-.section {
-  height: 100vh;
+/* row-reverse + right:0 = page 1 starts flush against the RIGHT edge.
+   Moving forward means translateX(+), which slides pages to the right and
+   reveals the next page coming in from the LEFT. */
+.track {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: calc(var(--pages) * 100vw);
   display: flex;
-  align-items: center;
-  padding: 0 10vw;
+  flex-direction: row-reverse;
+  will-change: transform;
 }
 
-.content {
-  max-width: 520px;
+/* ─── A page ──────────────────────────────────────────────────────────────
+   direction: rtl makes grid auto-placement start at the TOP-RIGHT cell and
+   flow leftward, then wrap down. DOM order == manga reading order. */
+.page {
+  position: relative;
+  flex: 0 0 100vw;
+  height: 100%;
+  padding: var(--margin-y) var(--margin-x);
+  display: grid;
+  gap: var(--gutter);
+  direction: rtl;
+  overflow: hidden;       /* clips the art panel's box-shadow to this page */
+  isolation: isolate;     /* own stacking context so z-indexes stay local */
+}
+
+/* Thin spine line on each page's left edge = where two pages meet. */
+.page::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 1px;
+  background: linear-gradient(transparent, #2a2a2a 20%, #2a2a2a 80%, transparent);
+  z-index: 3;
+}
+
+/* Tall layout: big art panel down the right column (read first),
+   two text panels stacked on the left (read top → bottom). */
+.page--tall {
+  grid-template-columns: 1.2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+.page--tall .panel--art { grid-row: span 2; }
+
+/* Wide layout: splash art across the top, two beats underneath
+   (right one read before left one). */
+.page--wide {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1.5fr 1fr;
+}
+.page--wide .panel--art { grid-column: span 2; }
+
+/* ─── Panels ──────────────────────────────────────────────────────────── */
+.panel {
+  position: relative;
+  border: 3px solid var(--ink);
+  direction: ltr;          /* text inside still reads left→right */
   pointer-events: auto;
 }
 
-.content--right {
-  margin-left: auto;
+/* THE CUTOUT TRICK: the art panel is transparent, and a gigantic box-shadow
+   paints "paper" everywhere AROUND it. .page overflow:hidden clips that
+   shadow, so the page becomes solid paper with one window punched through
+   to the WebGL canvas behind. Text panels sit above it (z-index 1). */
+.panel--art {
+  z-index: 0;
+  background: transparent;
+  box-shadow: 0 0 0 200vmax var(--paper);
+  pointer-events: none;
 }
 
-.content--center {
-  margin: 0 auto;
-  text-align: center;
+.panel--text {
+  z-index: 1;
+  background: var(--paper);
+  padding: clamp(1rem, 3vw, 2.5rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.8rem;
 }
 
+/* Screentone: the dot pattern manga artists stick on for shading. */
+.panel--tone {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1.4px) 0 0 / 7px 7px,
+    var(--paper);
+}
+
+.page-no {
+  position: absolute;
+  bottom: calc(var(--margin-y) * 0.35);
+  left: var(--margin-x);
+  z-index: 2;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: #555;
+  direction: ltr;
+}
+
+/* ─── Type ────────────────────────────────────────────────────────────── */
 h1 {
   font-size: clamp(3.5rem, 9vw, 7rem);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1;
-  background: linear-gradient(135deg, #ffffff 0%, #000000 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #3a3a3a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 h2 {
-  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-size: clamp(1.8rem, 4.2vw, 3.2rem);
   font-weight: 700;
   letter-spacing: -0.02em;
-  margin-bottom: 1.2rem;
+  line-height: 1.05;
+}
+
+.chapter {
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+p {
+  line-height: 1.7;
+  color: #a5a5a5;
+  font-size: clamp(0.95rem, 1.3vw, 1.1rem);
 }
 
 .subtitle {
-  margin-top: 1.2rem;
-  font-size: 1.15rem;
-  color: #888;
+  color: #bbb;
   letter-spacing: 0.02em;
 }
 
 .scroll-hint {
-  margin-top: 3.5rem;
   font-size: 0.8rem;
-  color: #444;
+  color: #666;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  animation: pulse 2.5s ease-in-out infinite;
+  animation: nudge 2.5s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.3; transform: translateY(0); }
-  50%       { opacity: 1;   transform: translateY(4px); }
+/* The hint nudges LEFT now — that's the direction of travel. */
+@keyframes nudge {
+  0%, 100% { opacity: 0.35; transform: translateX(0); }
+  50%       { opacity: 1;    transform: translateX(-6px); }
 }
 
-p {
-  line-height: 1.75;
-  color: #999;
-  font-size: 1.1rem;
-}
-
-.project-list {
-  list-style: none;
-  margin-top: 0.5rem;
-}
-
-.project-list li {
-  font-size: 1.3rem;
-  padding: 1rem 0;
-  border-bottom: 1px solid #1a1a1a;
-  color: #ccc;
-  transition: color 0.2s, padding-left 0.2s;
-}
-
-.project-list a {
-  color: inherit;
+.panel-link {
+  align-self: flex-start;
+  color: #ddd;
   text-decoration: none;
-  display: block;
+  font-size: 1rem;
+  border-bottom: 1px solid #444;
+  padding-bottom: 2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.panel-link:hover { color: #a78bfa; border-color: #a78bfa; }
+
+.end-mark {
+  color: #555;
+  letter-spacing: 0.3em;
 }
 
-.project-list li:hover {
-  color: #a78bfa;
-  padding-left: 0.5rem;
-}
-
+/* ─── Fixed chrome ────────────────────────────────────────────────────── */
 .blog-link {
   position: fixed;
-  top: 2rem;
-  right: 2.5rem;
+  top: 1.4rem;
+  right: 2rem;
   z-index: 2;
   font-size: 0.8rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: #666;
+  color: #777;
   text-decoration: none;
   transition: color 0.2s;
 }
+.blog-link:hover { color: #a78bfa; }
 
-.blog-link:hover {
-  color: #a78bfa;
+/* ─── Pager: [← 次]  03 / 06  [前 →] ─────────────────────────────────────
+   A little paper tag in the bottom-right margin, inked like a panel. */
+.pager {
+  position: fixed;
+  bottom: max(0.35rem, calc(var(--margin-y) * 0.5 - 1rem)); /* centered in the bottom page margin */
+  right: var(--margin-x);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem;
+  background: var(--paper);
+  border: 1px solid #2a2a2a;
+}
+
+.pager__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid #555;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background-color 0.2s, opacity 0.2s;
+}
+.pager__kana { font-size: 0.75rem; color: #777; transition: color 0.2s; }
+
+.pager__btn:hover:not(:disabled) {
+  color: var(--paper);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.pager__btn:hover:not(:disabled) .pager__kana { color: var(--paper); }
+.pager__btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pager__btn:disabled { opacity: 0.25; cursor: default; }
+
+.folio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.6rem;
+}
+
+.folio__count {
+  line-height: 1;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+}
+.folio__current {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+.folio__sep { margin: 0 0.3em; }
+
+/* One tick per page, page 1 on the RIGHT (RTL), like the book. */
+.folio__ticks {
+  display: flex;
+  direction: rtl;
+  gap: 3px;
+  list-style: none;
+}
+.folio__ticks li {
+  width: 8px;
+  height: 3px;
+  background: #2a2a2a;
+  transition: background-color 0.3s, width 0.3s;
+}
+.folio__ticks li.is-read    { background: #555; }
+.folio__ticks li.is-current { background: var(--accent); width: 16px; }
+
+/* ─── Narrow / portrait screens: stack panels, keep RTL page travel ───── */
+@media (max-width: 720px) {
+  :root { --margin-y: 9vh; --margin-x: 5vw; }
+  .pager { right: 50%; transform: translateX(50%); bottom: 0.6rem; }
+  .page--tall,
+  .page--wide {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1.3fr auto auto;
+  }
+  .page--tall .panel--art { grid-row: auto; }
+  .page--wide .panel--art { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-hint { animation: none; }
+  .folio__ticks li, .pager__btn { transition: none; }
 }
