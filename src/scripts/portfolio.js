@@ -39,19 +39,6 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 camera.position.set(0, 0, CAM_Z);
 scene.add(camera);
 
-// ─── Lights ──────────────────────────────────────────────────────────────────
-// Parented to the camera so they travel with you through the book instead
-// of only lighting the cover.
-scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-
-const purpleLight = new THREE.PointLight(0x6366f1, 4, 20);
-purpleLight.position.set(3, 2, -1);
-camera.add(purpleLight);
-
-const pinkLight = new THREE.PointLight(0xec4899, 4, 20);
-pinkLight.position.set(-3, -2, -3);
-camera.add(pinkLight);
-
 // ─── World ↔ screen mapping ─────────────────────────────────────────────────
 // LESSON: how big is the screen in world units at a given depth?
 // A perspective camera's visible height at distance d is 2·d·tan(fov/2);
@@ -76,56 +63,59 @@ function addActor(object, { size, z = 0 }) {
   return object;
 }
 
-// 1 · Hero — cross
-const arm = 1.2, w = 0.35;
+// Every mesh is a fat wireframe. LineMaterial ignores lights, so the scene
+// needs none. EdgesGeometry draws every edge sharper than 1°, so keep
+// geometry low-poly or the outline turns into a mesh of lines.
+const lineMats = [];
+function wireLines(geometry, color) {
+  const geo = new LineSegmentsGeometry().fromEdgesGeometry(new THREE.EdgesGeometry(geometry));
+  const mat = new LineMaterial({ color, linewidth: 3, resolution: new THREE.Vector2(window.innerWidth, window.innerHeight) });
+  lineMats.push(mat);
+  return new LineSegments2(geo, mat);
+}
+function wireActor(geometry, color, size, z) {
+  return addActor(wireLines(geometry, color), { size, z });
+}
+
+// 1 · Hero — Latin cross: short top arm, long foot, crossbar set high.
+const w = 0.3;                          // half the beam thickness
+const top = 1.0, foot = -1.8, arm = 0.9; // beam ends
+const bar = 0.4;                        // crossbar's centre height
 const crossShape = new THREE.Shape();
-crossShape.moveTo(-w,  arm);
-crossShape.lineTo( w,  arm);
-crossShape.lineTo( w,  w);
-crossShape.lineTo( arm, w);
-crossShape.lineTo( arm, -w);
-crossShape.lineTo( w,  -w);
-crossShape.lineTo( w,  -arm);
-crossShape.lineTo(-w,  -arm);
-crossShape.lineTo(-w,  -w);
-crossShape.lineTo(-arm, -w);
-crossShape.lineTo(-arm,  w);
-crossShape.lineTo(-w,   w);
+crossShape.moveTo(-w,   top);
+crossShape.lineTo( w,   top);
+crossShape.lineTo( w,   bar + w);
+crossShape.lineTo( arm, bar + w);
+crossShape.lineTo( arm, bar - w);
+crossShape.lineTo( w,   bar - w);
+crossShape.lineTo( w,   foot);
+crossShape.lineTo(-w,   foot);
+crossShape.lineTo(-w,   bar - w);
+crossShape.lineTo(-arm, bar - w);
+crossShape.lineTo(-arm, bar + w);
+crossShape.lineTo(-w,   bar + w);
 crossShape.closePath();
-const crossGeo = new THREE.ExtrudeGeometry(crossShape, { depth: 0.4, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.08, bevelSegments: 4 });
+const crossGeo = new THREE.ExtrudeGeometry(crossShape, { depth: 0.4, bevelEnabled: false });
 crossGeo.center(); // so it spins around its middle, not a corner
-const cross = addActor(new THREE.Mesh(
-  crossGeo,
-  new THREE.MeshStandardMaterial({ color: 0x6366f1, emissive: 0x6366f1, emissiveIntensity: 0.6, roughness: 0.3, metalness: 0.5 })
-), { size: 2.6 });
+const cross = wireActor(crossGeo, 0x6366f1, 2.8, 0);
 
 // 2 · About — 'i' (stem + dot)
-const iMat = new THREE.MeshNormalMaterial();
+const iColor = 0x34d399;
 const iGroup = new THREE.Group();
-const stem = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.2, 0.45), iMat);
-const dot = new THREE.Mesh(new THREE.SphereGeometry(0.38, 32, 32), iMat);
+const stem = wireLines(new THREE.BoxGeometry(0.45, 2.2, 0.45), iColor);
+const dot = wireLines(new THREE.IcosahedronGeometry(0.38, 1), iColor);
 stem.position.y = -0.3;
 dot.position.y = 1.3;
 iGroup.add(stem, dot);
 addActor(iGroup, { size: 3.2, z: -1 });
 
-// 3–5 · Projects — fat wireframes, one per project
-const lineMats = [];
-function wireActor(geometry, color, size, z) {
-  const geo = new LineSegmentsGeometry().fromEdgesGeometry(new THREE.EdgesGeometry(geometry));
-  const mat = new LineMaterial({ color, linewidth: 3, resolution: new THREE.Vector2(window.innerWidth, window.innerHeight) });
-  lineMats.push(mat);
-  return addActor(new LineSegments2(geo, mat), { size, z });
-}
+// 3–5 · Projects — one per project
 const icosa  = wireActor(new THREE.IcosahedronGeometry(1.3, 0), 0x22d3ee, 2.6, -1); // Operation Floresta
 const dodeca = wireActor(new THREE.DodecahedronGeometry(1.3, 0), 0xf472b6, 2.6, -1); // Tutor Helper Finder
 const tetra  = wireActor(new THREE.TetrahedronGeometry(1.5, 0), 0xfbbf24, 2.6, -1);  // moto-repo
 
 // 6 · Contact — octahedron
-const octa = addActor(new THREE.Mesh(
-  new THREE.OctahedronGeometry(1.3),
-  new THREE.MeshStandardMaterial({ color: 0xa78bfa, emissive: 0xa78bfa, emissiveIntensity: 0.6, roughness: 0.2, metalness: 0.5 })
-), { size: 2.6 });
+const octa = wireActor(new THREE.OctahedronGeometry(1.3), 0xa78bfa, 2.6, 0);
 
 if (actors.length !== PAGE_COUNT) {
   console.warn(`[manga] ${PAGE_COUNT} pages but ${actors.length} meshes — some pages will have an empty art panel.`);
@@ -360,8 +350,8 @@ function animate(time) {
   }
 
   const t = timer.getElapsed();
-  cross.rotation.x  = t * 0.3;
   cross.rotation.y  = t * 0.5;
+  cross.rotation.x  = Math.sin(t * 0.5) * 0.15; // stays upright, only sways
   iGroup.rotation.y = t * 0.4;
   iGroup.rotation.z = Math.sin(t * 0.5) * 0.15;
   icosa.rotation.x  = t * 0.5;
