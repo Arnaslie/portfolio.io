@@ -118,8 +118,8 @@ function wireActor(geometry, color, size, z) {
   return addActor(new LineSegments2(geo, mat), { size, z });
 }
 const icosa  = wireActor(new THREE.IcosahedronGeometry(1.3, 0), 0x22d3ee, 2.6, -1); // Operation Floresta
-const dodeca = wireActor(new THREE.DodecahedronGeometry(1.3, 0), 0xf472b6, 2.6, -1); // March Madness
-const tetra  = wireActor(new THREE.TetrahedronGeometry(1.5, 0), 0xfbbf24, 2.6, -1);  // Animal Checker
+const dodeca = wireActor(new THREE.DodecahedronGeometry(1.3, 0), 0xf472b6, 2.6, -1); // Tutor Helper Finder
+const tetra  = wireActor(new THREE.TetrahedronGeometry(1.5, 0), 0xfbbf24, 2.6, -1);  // moto-repo
 
 // 6 · Contact — octahedron
 const octa = addActor(new THREE.Mesh(
