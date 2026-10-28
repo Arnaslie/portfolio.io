@@ -111,8 +111,8 @@ addActor(iGroup, { size: 3.2, z: -1 });
 
 // 3–5 · Projects — one per project
 const icosa  = wireActor(new THREE.IcosahedronGeometry(1.3, 0), 0x22d3ee, 2.6, -1); // Operation Floresta
-const dodeca = wireActor(new THREE.DodecahedronGeometry(1.3, 0), 0xf472b6, 2.6, -1); // Tutor Helper Finder
-const tetra  = wireActor(new THREE.TetrahedronGeometry(1.5, 0), 0xfbbf24, 2.6, -1);  // moto-repo
+const dodeca = wireActor(new THREE.DodecahedronGeometry(1.3, 0), 0xf472b6, 2.6, -1); // Quad Tutor
+const tetra  = wireActor(new THREE.TetrahedronGeometry(1.5, 0), 0xfbbf24, 2.6, -1);  // Throttleride.global
 
 // 6 · Contact — octahedron
 const octa = wireActor(new THREE.OctahedronGeometry(1.3), 0xa78bfa, 2.6, 0);
