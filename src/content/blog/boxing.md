@@ -2,7 +2,7 @@
 title: "Why Boxing?"
 date: 2026-11-18
 description: ""
-tags: [boxing]
+tags: [boxing, muay thai, wrestling, mma]
 ---
 
 If you think about boxing, it's a wierd martial art. In fact, I'm going to go as far as to say that this could be closer classified as a performance than a combat sport. If you want to train martial arts you would want to learn a discipline that includes your hands, feet, striking, & tussling. Boxing is just striking. It's not me trying to diminish it. Trainning is momentously difficult. Pro wrestling has the same characterisitics. Hard training, high risk of injury. More likely to use a boxing move in a street fight than a pro wrestling move. This reminds me of a clip at the Red Lion in Champaign, IL where one kid body slammed another. Crazy Brock Lesnar impersonation. 
