@@ -112,7 +112,7 @@ addActor(iGroup, { size: 3.2, z: -1 });
 
 // 3–5 · Projects — one per project
 const icosa  = wireActor(new THREE.IcosahedronGeometry(1.3, 0), 0x22d3ee, 2.6, -1); // Builders Marketplace
-const dodeca = wireActor(new THREE.DodecahedronGeometry(1.3, 0), 0xf472b6, 2.6, -1); // Quad Tutor
+const dodeca = wireActor(new THREE.DodecahedronGeometry(1.3, 0), 0xdc143c, 2.6, -1); // Quad Tutor (crimson)
 const tetra  = wireActor(new THREE.TetrahedronGeometry(1.5, 0), 0xfbbf24, 2.6, -1);  // Throttleride.global
 
 // 6 · Contact — octahedron
