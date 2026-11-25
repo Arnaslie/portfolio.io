@@ -3,6 +3,7 @@ import Lenis from 'lenis';
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
+import starData from '../data/stars.json';
 
 // ─── DOM: the book ───────────────────────────────────────────────────────────
 const track = document.getElementById('track');
@@ -154,8 +155,112 @@ function layoutActors() {
   });
 }
 
-// ─── Particles: dust spread across the whole book ───────────────────────────
-const particleCount = 3500;
+// ─── Sky: the real night sky, time-lapsed ────────────────────────────────────
+// 5,044 naked-eye stars (src/data/stars.json, built by `npm run stars`) on a
+// distant sphere. The sky opens at the visitor's actual sidereal time, then
+// runs fast so the rotation is visible, and every page-turn adds a few hours.
+//
+// LESSON: frames. Inner group = equatorial frame (celestial pole on +y, each
+// star at angle RA around it). Spinning it about y by (90° − LST) is Earth's
+// rotation: a star with RA = LST lands on the meridian (−z, due south, where
+// the camera looks). The outer group tilts that pole up to altitude = latitude
+// toward north (+z), giving the horizon frame: +y zenith, −x east, +x west.
+const SKY_RADIUS = 60;          // inside the camera's far plane (100)
+const SKY_TIME_SCALE = matchMedia('(prefers-reduced-motion: reduce)').matches
+  ? 1                           // honest real time for reduced motion
+  : 240;                        // 1 real second = 4 sky minutes = 1°
+const SKY_HOURS_PER_PAGE = 2;   // each page-turn sweeps 30° of sky
+const SKY_LAT = 45;             // no geolocation prompt: a mid-northern sky…
+const SKY_LON = (-new Date().getTimezoneOffset() / 60) * 15; // …at the visitor's timezone longitude
+const skyEpoch = Date.now();
+
+// Greenwich mean sidereal time → local sidereal time, in radians.
+function localSiderealTime(ms) {
+  const daysSinceJ2000 = ms / 86400000 + 2440587.5 - 2451545.0;
+  const deg = 280.46061837 + 360.98564736629 * daysSinceJ2000 + SKY_LON;
+  return THREE.MathUtils.degToRad(((deg % 360) + 360) % 360);
+}
+
+// B−V colour index → tint: blue-white hot stars to orange cool ones,
+// kept pale so the sky reads as white with a hint of colour.
+const STAR_HOT = new THREE.Color(0xaabfff);
+const STAR_MID = new THREE.Color(0xfff6ec);
+const STAR_COOL = new THREE.Color(0xffc98a);
+function starColor(bv, out) {
+  return bv < 0.6
+    ? out.copy(STAR_HOT).lerp(STAR_MID, THREE.MathUtils.clamp((bv + 0.3) / 0.9, 0, 1))
+    : out.copy(STAR_MID).lerp(STAR_COOL, THREE.MathUtils.clamp((bv - 0.6) / 1.0, 0, 1));
+}
+
+const starCount = starData.length / 4;
+const starPos = new Float32Array(starCount * 3);
+const starCol = new Float32Array(starCount * 3);
+const starSize = new Float32Array(starCount);
+const starAlpha = new Float32Array(starCount);
+const tint = new THREE.Color();
+for (let i = 0; i < starCount; i++) {
+  const ra = THREE.MathUtils.degToRad(starData[i * 4]);
+  const dec = THREE.MathUtils.degToRad(starData[i * 4 + 1]);
+  const mag = starData[i * 4 + 2];
+  starPos[i * 3]     = SKY_RADIUS * Math.cos(dec) * Math.cos(ra);
+  starPos[i * 3 + 1] = SKY_RADIUS * Math.sin(dec);
+  starPos[i * 3 + 2] = -SKY_RADIUS * Math.cos(dec) * Math.sin(ra);
+  starColor(starData[i * 4 + 3], tint).toArray(starCol, i * 3);
+  // Magnitude is logarithmic and inverted: Sirius (−1.5) big, mag 6 a speck.
+  starSize[i] = 1.1 + Math.max(0, 6 - mag) * 0.55;
+  starAlpha[i] = THREE.MathUtils.clamp(0.3 + (6 - mag) * 0.12, 0.3, 1);
+}
+const starGeo = new THREE.BufferGeometry();
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+starGeo.setAttribute('color', new THREE.BufferAttribute(starCol, 3));
+starGeo.setAttribute('size', new THREE.BufferAttribute(starSize, 1));
+starGeo.setAttribute('alpha', new THREE.BufferAttribute(starAlpha, 1));
+const starMat = new THREE.ShaderMaterial({
+  uniforms: { uPixelRatio: { value: renderer.getPixelRatio() } },
+  vertexShader: /* glsl */ `
+    attribute float size;
+    attribute float alpha;
+    varying vec3 vColor;
+    varying float vAlpha;
+    uniform float uPixelRatio;
+    void main() {
+      vColor = color;
+      vAlpha = alpha;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      gl_PointSize = size * uPixelRatio; // fixed pixels: stars don't scale with distance
+    }`,
+  fragmentShader: /* glsl */ `
+    varying vec3 vColor;
+    varying float vAlpha;
+    void main() {
+      float d = length(gl_PointCoord - 0.5);
+      float a = smoothstep(0.5, 0.15, d) * vAlpha; // soft round disc
+      if (a < 0.01) discard;
+      gl_FragColor = vec4(vColor, a);
+    }`,
+  vertexColors: true,
+  transparent: true,
+  depthWrite: false,
+});
+const skyTilt = new THREE.Group();
+skyTilt.rotation.x = THREE.MathUtils.degToRad(90 - SKY_LAT);
+const skySpin = new THREE.Group();
+const stars = new THREE.Points(starGeo, starMat);
+stars.renderOrder = -1; // backdrop: draw before the meshes
+skySpin.add(stars);
+skyTilt.add(skySpin);
+scene.add(skyTilt);
+
+function updateSky(elapsedSec, pagesTravelled) {
+  // The sky is infinitely far: it follows the camera's position (so panning
+  // never slides it) and only rotates.
+  skyTilt.position.copy(camera.position);
+  const simMs = skyEpoch + (elapsedSec * SKY_TIME_SCALE + pagesTravelled * SKY_HOURS_PER_PAGE * 3600) * 1000;
+  skySpin.rotation.y = Math.PI / 2 - localSiderealTime(simMs);
+}
+
+// ─── Particles: near dust, for parallax depth as pages turn ─────────────────
+const particleCount = 800;
 const positions = new Float32Array(particleCount * 3);
 const span = PAGE_W * (PAGE_COUNT + 2);
 for (let i = 0; i < particleCount; i++) {
@@ -362,6 +467,7 @@ function animate(time) {
   tetra.rotation.z  = t * 0.25;
   octa.rotation.x   = t * 0.2;
   octa.rotation.y   = t * 0.45;
+  updateSky(t, pagesTravelled);
 
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
@@ -379,6 +485,7 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  starMat.uniforms.uPixelRatio.value = renderer.getPixelRatio();
   lineMats.forEach((m) => m.resolution.set(window.innerWidth, window.innerHeight));
   lenis.resize();
   layoutActors();
