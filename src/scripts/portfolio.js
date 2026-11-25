@@ -4,6 +4,7 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import starData from '../data/stars.json';
+import { initReveal } from './reveal.js';
 
 // ─── DOM: the book ───────────────────────────────────────────────────────────
 const track = document.getElementById('track');
@@ -304,6 +305,7 @@ const lenis = new Lenis({
 // so compute it ourselves with a 0 fallback.
 const progress = () => (lenis.limit > 0 ? lenis.scroll / lenis.limit : 0);
 const pageStep = () => lenis.limit / LAST;           // scroll px per page-turn
+const refreshReveal = initReveal({ lenis, pages, pageStep });
 
 // ─── Continuous glide that settles onto the nearest page ────────────────────
 // No hard snapping: Lenis glides freely. Once input stops (no scroll event
@@ -490,4 +492,5 @@ window.addEventListener('resize', () => {
   lenis.resize();
   layoutActors();
   lenis.scrollTo(page * pageStep(), { immediate: true });
+  refreshReveal();
 });
