@@ -168,7 +168,7 @@ function layoutActors() {
 const SKY_RADIUS = 60;          // inside the camera's far plane (100)
 const SKY_TIME_SCALE = matchMedia('(prefers-reduced-motion: reduce)').matches
   ? 1                           // honest real time for reduced motion
-  : 240;                        // 1 real second = 4 sky minutes = 1°
+  : 360;                        // 1 real second = 6 sky minutes = 1.5°
 const SKY_HOURS_PER_PAGE = 2;   // each page-turn sweeps 30° of sky
 const SKY_LAT = 45;             // no geolocation prompt: a mid-northern sky…
 const SKY_LON = (-new Date().getTimezoneOffset() / 60) * 15; // …at the visitor's timezone longitude
